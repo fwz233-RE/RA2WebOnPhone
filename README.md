@@ -83,6 +83,12 @@ cd RA2WebOnPhone
 
 ![摇杆界面](摇杆.png)
 
+### 🎬 功能演示视频
+
+https://github.com/fwz233-RE/RA2WebOnPhone/assets/摇杆.mov
+
+> 完整的摇杆控制功能演示 - 展示游戏手柄映射、虚拟摇杆操作和游戏控制界面
+
 ## 📝 开发历史
 
 该项目经过多次迭代改进，主要更新包括：
