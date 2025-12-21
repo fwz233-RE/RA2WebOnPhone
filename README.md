@@ -32,6 +32,7 @@ RA2WebOnPhone/
 │               └── ui/
 │                   └── GamepadMouseController.kt
 ├── joystick_demo.mp4           # 功能演示视频
+├── joystick_thumbnail.jpg      # 视频缩略图
 ├── build.gradle.kts            # 项目构建配置
 └── README.md                   # 项目说明文档
 ```
@@ -81,7 +82,10 @@ cd RA2WebOnPhone
 ### 🎬 功能演示视频
 
 <div align="center">
-  <video src="https://raw.githubusercontent.com/fwz233-RE/RA2WebOnPhone/main/joystick_demo.mp4" width="100%" controls></video>
+  <a href="https://github.com/fwz233-RE/RA2WebOnPhone/blob/main/joystick_demo.mp4">
+    <img src="joystick_thumbnail.jpg" alt="点击观看功能演示视频" width="80%">
+  </a>
+  <p><em>👆 点击上方图片观看功能演示视频</em></p>
 </div>
 
 > 完整的摇杆控制功能演示 - 展示游戏手柄映射、虚拟摇杆操作和游戏控制界面
