@@ -81,14 +81,10 @@ cd RA2WebOnPhone
 
 ### 🎬 功能演示视频
 
-<div align="center">
-  <a href="https://github.com/fwz233-RE/RA2WebOnPhone/blob/main/joystick_demo.mp4">
-    <img src="joystick_thumbnail.jpg" alt="点击观看功能演示视频" width="80%">
-  </a>
-  <p><em>👆 点击上方图片观看功能演示视频</em></p>
-</div>
+[点击观看功能演示视频](http://www.google.com)
 
 > 完整的摇杆控制功能演示 - 展示游戏手柄映射、虚拟摇杆操作和游戏控制界面
+
 
 ## 📝 开发历史
 
