@@ -451,10 +451,10 @@ class GamepadMouseController(
                     }
                 }
             }
-            // L1 - 模拟长按500ms
+            // L1 - 模拟长按650ms
             KeyEvent.KEYCODE_BUTTON_L1 -> {
                 if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                    simulateLongPress(700)
+                    simulateLongPress(650)
                 }
                 return true
             }

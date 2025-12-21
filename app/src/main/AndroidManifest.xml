@@ -49,6 +49,22 @@
             android:theme="@style/Theme.RA2WebOnPhone.Fullscreen"
             android:hardwareAccelerated="true" />
 
+        <!-- Settings Activity -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.RA2WebOnPhone" />
+
+        <!-- Open Source Libraries Activity -->
+        <activity
+            android:name=".OpenSourceActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Theme.RA2WebOnPhone" />
+
     </application>
 
 </manifest>

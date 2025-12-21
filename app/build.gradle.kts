@@ -56,6 +56,12 @@ dependencies {
     // Material Icons Extended
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Coil for image loading (website favicons)
+    implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.7.6")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

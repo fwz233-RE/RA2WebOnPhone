@@ -33,9 +33,12 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import com.ra2.webonphone.data.SettingsRepository
 import com.ra2.webonphone.ui.ControlMode
 import com.ra2.webonphone.ui.GamepadMouseController
 import com.ra2.webonphone.ui.SidebarView
+import com.ra2.webonphone.ui.SystemStatsView
+import com.ra2.webonphone.util.LocaleHelper
 import kotlin.math.abs
 
 class WebViewActivity : ComponentActivity() {
@@ -46,6 +49,12 @@ class WebViewActivity : ComponentActivity() {
         private const val BACK_PRESS_INTERVAL = 2000L
         private const val WHITE_SCREEN_CHECK_DELAY = 15000L
         private const val TAG = "WebViewActivity"
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        val settingsRepo = SettingsRepository(newBase)
+        val language = settingsRepo.getAppLanguage()
+        super.attachBaseContext(LocaleHelper.setLocale(newBase, language))
     }
 
     /**
@@ -90,6 +99,8 @@ class WebViewActivity : ComponentActivity() {
     private lateinit var container: FrameLayout
     private lateinit var gamepadMouseController: GamepadMouseController
     private lateinit var sidebarView: SidebarView
+    private lateinit var systemStatsView: SystemStatsView
+    private lateinit var settingsRepository: SettingsRepository
     private var backPressedTime: Long = 0
     private var isGamepadFocusEnabled = true
     private var currentUrl: String = ""
@@ -116,6 +127,9 @@ class WebViewActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 初始化设置仓库
+        settingsRepository = SettingsRepository(this)
 
         // MTK优化：禁用Window级别硬件加速以减少GPUAUX错误
         // WebView内部仍会使用GPU进行WebGL渲染
@@ -151,6 +165,9 @@ class WebViewActivity : ComponentActivity() {
 
         // 初始化侧边栏
         setupSidebar()
+
+        // 初始化系统状态监控视图
+        setupSystemStatsView()
 
         // 设置系统UI变化监听器，确保游戏模式下状态栏不会意外显示
         setupSystemUiListener()
@@ -634,7 +651,7 @@ class WebViewActivity : ComponentActivity() {
     // 摇杆触摸状态管理
     private var joystickTouchState = JoystickTouchState.INACTIVE
     private var clearTouchTask: Runnable? = null
-    private val CLEAR_TOUCH_DELAY = 500L  // 延迟清除时间（毫秒）
+    private val CLEAR_TOUCH_DELAY = 350L  // 延迟清除时间（毫秒）
 
     /**
      * 控制虚拟摇杆（带延迟清除机制）
@@ -1106,7 +1123,7 @@ class WebViewActivity : ComponentActivity() {
                 } catch (e: Exception) {
                     this@WebViewActivity.filePathCallback?.onReceiveValue(null)
                     this@WebViewActivity.filePathCallback = null
-                    Toast.makeText(this@WebViewActivity, "无法打开文件选择器", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@WebViewActivity, getString(R.string.cannot_open_file_chooser), Toast.LENGTH_SHORT).show()
                     return false
                 }
             }
@@ -1165,7 +1182,7 @@ class WebViewActivity : ComponentActivity() {
             webView?.let { wv ->
                 wv.clearCache(true)
                 wv.clearHistory()
-                Toast.makeText(this, "缓存已清除", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.cache_cleared), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -1177,8 +1194,8 @@ class WebViewActivity : ComponentActivity() {
             val newMode = gamepadMouseController.toggleMode()
             val isGameMode = newMode == ControlMode.GAME_MODE
             sidebarView.updateGameMode(isGameMode)
-            val modeName = if (isGameMode) "游戏模式" else "网页模式"
-            Toast.makeText(this, "已切换到$modeName", Toast.LENGTH_SHORT).show()
+            val message = if (isGameMode) getString(R.string.switched_to_game_mode) else getString(R.string.switched_to_web_mode)
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
             // 更新网页中的游戏模式状态（用于 JavaScript 全屏保护）
             updateWebGameModeState(isGameMode)
@@ -1204,7 +1221,7 @@ class WebViewActivity : ComponentActivity() {
             val enabled = !gamepadMouseController.isMappingEnabled()
             gamepadMouseController.setMappingEnabled(enabled)
             sidebarView.updateMappingEnabled(enabled)
-            val statusText = if (enabled) "已开启摇杆映射" else "已关闭摇杆映射"
+            val statusText = if (enabled) getString(R.string.mapping_enabled) else getString(R.string.mapping_disabled)
             Toast.makeText(this, statusText, Toast.LENGTH_SHORT).show()
 
             // 开启映射时重置摇杆位置
@@ -1228,6 +1245,40 @@ class WebViewActivity : ComponentActivity() {
 
         // 更新当前URL
         sidebarView.updateUrl(currentUrl)
+    }
+
+    private fun setupSystemStatsView() {
+        systemStatsView = SystemStatsView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = android.view.Gravity.START or android.view.Gravity.TOP
+                // 留一点边距避免被刘海遮挡
+                topMargin = 4
+                leftMargin = 4
+            }
+        }
+
+        // 设置监控目标为WebView
+        systemStatsView.setTargetView(webView!!)
+
+        // 添加到容器（在侧边栏之前，确保不遮挡侧边栏）
+        container.addView(systemStatsView)
+
+        // 根据设置控制显示
+        updateSystemStatsVisibility()
+    }
+
+    private fun updateSystemStatsVisibility() {
+        val showStats = settingsRepository.getShowSystemStats()
+        if (showStats) {
+            systemStatsView.visibility = View.VISIBLE
+            systemStatsView.start()
+        } else {
+            systemStatsView.visibility = View.GONE
+            systemStatsView.stop()
+        }
     }
 
     private fun loadUrl(url: String) {
@@ -1258,7 +1309,7 @@ class WebViewActivity : ComponentActivity() {
                 wv.clearHistory()
                 wv.settings?.cacheMode = WebSettings.LOAD_NO_CACHE
                 retryCount = 0
-                Toast.makeText(this, "正在清除缓存重新加载...", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.clearing_cache_and_reload), Toast.LENGTH_SHORT).show()
             } else {
                 // 普通重试，保留缓存
                 wv.settings?.cacheMode = WebSettings.LOAD_DEFAULT
@@ -1336,6 +1387,11 @@ class WebViewActivity : ComponentActivity() {
         // 重新绑定侧边栏到新的WebView
         if (::sidebarView.isInitialized) {
             sidebarView.attachWebView(webView!!)
+        }
+
+        // 重新绑定系统状态监控到新的WebView
+        if (::systemStatsView.isInitialized) {
+            systemStatsView.setTargetView(webView!!)
         }
 
         // 重新加载
@@ -1447,6 +1503,9 @@ class WebViewActivity : ComponentActivity() {
         webView?.onResume()
         isGamepadFocusEnabled = true
         gamepadMouseController.start()
+        if (::systemStatsView.isInitialized) {
+            updateSystemStatsVisibility()
+        }
         webView?.requestFocus()
 
         // 游戏模式下恢复沉浸式全屏
@@ -1469,11 +1528,19 @@ class WebViewActivity : ComponentActivity() {
         webView?.onPause()
         isGamepadFocusEnabled = false
         gamepadMouseController.stop()
+        if (::systemStatsView.isInitialized) {
+            systemStatsView.stop()
+        }
     }
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         gamepadMouseController.destroy()
+
+        // 清理系统状态监控
+        if (::systemStatsView.isInitialized) {
+            systemStatsView.stop()
+        }
 
         // 清理文件选择器回调
         filePathCallback?.onReceiveValue(null)
@@ -1534,7 +1601,7 @@ class WebViewActivity : ComponentActivity() {
                     finish()
                 } else {
                     backPressedTime = currentTime
-                    Toast.makeText(this, "游戏模式下再按一次返回退出", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.press_back_again_game_mode), Toast.LENGTH_SHORT).show()
                     // 确保保持沉浸式全屏
                     reapplyImmersiveMode()
                 }
@@ -1620,7 +1687,7 @@ class WebViewActivity : ComponentActivity() {
                 finish()
             } else {
                 backPressedTime = currentTime
-                Toast.makeText(this, "游戏模式下再按一次返回退出", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.press_back_again_game_mode), Toast.LENGTH_SHORT).show()
             }
             return
         }
@@ -1644,7 +1711,7 @@ class WebViewActivity : ComponentActivity() {
             finish()
         } else {
             backPressedTime = currentTime
-            Toast.makeText(this, "再按一次返回退出", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.press_back_again_to_exit), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -1658,7 +1725,7 @@ class WebViewActivity : ComponentActivity() {
                     return true
                 } else {
                     backPressedTime = currentTime
-                    Toast.makeText(this, "游戏模式下再按一次返回退出", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.press_back_again_game_mode), Toast.LENGTH_SHORT).show()
                     return true
                 }
             }
@@ -1681,7 +1748,7 @@ class WebViewActivity : ComponentActivity() {
                 return true
             } else {
                 backPressedTime = currentTime
-                Toast.makeText(this, "再按一次返回退出", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.press_back_again_to_exit), Toast.LENGTH_SHORT).show()
                 return true
             }
         }

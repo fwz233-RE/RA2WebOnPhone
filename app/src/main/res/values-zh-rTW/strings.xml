@@ -1,0 +1,66 @@
+<resources>
+    <string name="app_name">RA2WebOnPhone</string>
+
+    <!-- Main Screen -->
+    <string name="add_link">新增連結</string>
+    <string name="no_links">暫無連結</string>
+    <string name="no_links_hint">點擊右下角按鈕新增遊戲連結</string>
+    <string name="settings">設定</string>
+    <string name="delete">刪除</string>
+
+    <!-- Add Link Dialog -->
+    <string name="add_new_link">新增連結</string>
+    <string name="description">描述</string>
+    <string name="enter_description">輸入連結描述</string>
+    <string name="link_address">連結網址</string>
+    <string name="please_enter_description">請輸入描述</string>
+    <string name="please_enter_valid_url">請輸入有效的網址</string>
+    <string name="cancel">取消</string>
+    <string name="add">新增</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">設定</string>
+    <string name="back">返回</string>
+    <string name="display_settings">顯示設定</string>
+    <string name="performance_monitor">效能監控</string>
+    <string name="performance_monitor_desc">在遊戲中顯示幀率、CPU等資訊</string>
+    <string name="language_settings">語言設定</string>
+    <string name="language">語言</string>
+    <string name="language_desc">選擇應用程式顯示語言</string>
+    <string name="about">關於</string>
+    <string name="current_version">目前版本</string>
+    <string name="check_update">檢查更新</string>
+    <string name="check_update_desc">前往 GitHub 查看最新版本</string>
+    <string name="open_source">開源元件</string>
+    <string name="open_source_desc">查看本應用程式使用的開源函式庫</string>
+    <string name="checking_update">正在檢查更新...</string>
+    <string name="follow_system">跟隨系統</string>
+
+    <!-- Open Source Screen -->
+    <string name="open_source_title">開源元件</string>
+    <string name="open_link">開啟連結</string>
+
+    <!-- Language Selection Dialog -->
+    <string name="select_language">選擇語言</string>
+
+    <!-- Sidebar -->
+    <string name="control_panel">控制面板</string>
+    <string name="progress_format">進度: %d%%</string>
+    <string name="web_mode">網頁模式</string>
+    <string name="game_mode">遊戲模式</string>
+    <string name="disable_mapping">關閉映射</string>
+    <string name="mapping">映射</string>
+    <string name="force_refresh">強制重新整理</string>
+    <string name="clear_cache">清除快取</string>
+    <string name="close">關閉</string>
+    <string name="cache_cleared">快取已清除</string>
+    <string name="switched_to_game_mode">已切換到遊戲模式</string>
+    <string name="switched_to_web_mode">已切換到網頁模式</string>
+    <string name="mapping_enabled">已開啟搖桿映射</string>
+    <string name="mapping_disabled">已關閉搖桿映射</string>
+    <string name="press_back_again_to_exit">再按一次返回退出</string>
+    <string name="press_back_again_game_mode">遊戲模式下再按一次返回退出</string>
+    <string name="clearing_cache_and_reload">正在清除快取重新載入...</string>
+    <string name="select_file">選擇檔案</string>
+    <string name="cannot_open_file_chooser">無法開啟檔案選擇器</string>
+</resources>

@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import com.ra2.webonphone.R
 
 /**
  * WebView控制侧边栏
@@ -91,7 +92,7 @@ class SidebarView @JvmOverloads constructor(
 
         // 标题
         val titleText = TextView(context).apply {
-            text = "控制面板"
+            text = context.getString(R.string.control_panel)
             textSize = 20f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
@@ -101,7 +102,7 @@ class SidebarView @JvmOverloads constructor(
 
         // 进度
         progressText = TextView(context).apply {
-            text = "进度: 0%"
+            text = context.getString(R.string.progress_format, 0)
             textSize = 14f
             setTextColor(Color.parseColor("#AAAAAA"))
         }
@@ -158,17 +159,17 @@ class SidebarView @JvmOverloads constructor(
         updateMappingButtonState()
         buttonContainer.addView(mappingButton)
 
-        addWeightedButton(buttonContainer, "⟳  强制刷新") {
+        addWeightedButton(buttonContainer, "⟳  ${context.getString(R.string.force_refresh)}") {
             onForceRefreshClick?.invoke()
             hide()
         }
 
-        addWeightedButton(buttonContainer, "🗑  清缓存") {
+        addWeightedButton(buttonContainer, "🗑  ${context.getString(R.string.clear_cache)}") {
             onClearCacheClick?.invoke()
             hide()
         }
 
-        addWeightedButton(buttonContainer, "✕  关闭") {
+        addWeightedButton(buttonContainer, "✕  ${context.getString(R.string.close)}") {
             hide()
         }
 
@@ -176,11 +177,11 @@ class SidebarView @JvmOverloads constructor(
     }
 
     private fun getGameModeButtonText(): String {
-        return if (isGameMode) "🌐  网页模式" else "🎮  游戏模式"
+        return if (isGameMode) "🌐  ${context.getString(R.string.web_mode)}" else "🎮  ${context.getString(R.string.game_mode)}"
     }
 
     private fun getMappingButtonText(): String {
-        return if (isMappingEnabled) "🎮  关闭映射" else "🎮  映射"
+        return if (isMappingEnabled) "🎮  ${context.getString(R.string.disable_mapping)}" else "🎮  ${context.getString(R.string.mapping)}"
     }
 
     /**
@@ -329,7 +330,7 @@ class SidebarView @JvmOverloads constructor(
 
     fun updateProgress(progress: Int) {
         progressBar.progress = progress
-        progressText.text = "进度: $progress%"
+        progressText.text = context.getString(R.string.progress_format, progress)
     }
 
     fun updateUrl(url: String) {

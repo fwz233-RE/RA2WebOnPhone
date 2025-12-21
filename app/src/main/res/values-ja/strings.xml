@@ -1,0 +1,66 @@
+<resources>
+    <string name="app_name">RA2WebOnPhone</string>
+
+    <!-- Main Screen -->
+    <string name="add_link">リンクを追加</string>
+    <string name="no_links">リンクがありません</string>
+    <string name="no_links_hint">右下のボタンをタップしてゲームリンクを追加</string>
+    <string name="settings">設定</string>
+    <string name="delete">削除</string>
+
+    <!-- Add Link Dialog -->
+    <string name="add_new_link">新しいリンクを追加</string>
+    <string name="description">説明</string>
+    <string name="enter_description">リンクの説明を入力</string>
+    <string name="link_address">リンクURL</string>
+    <string name="please_enter_description">説明を入力してください</string>
+    <string name="please_enter_valid_url">有効なURLを入力してください</string>
+    <string name="cancel">キャンセル</string>
+    <string name="add">追加</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">設定</string>
+    <string name="back">戻る</string>
+    <string name="display_settings">表示設定</string>
+    <string name="performance_monitor">パフォーマンスモニター</string>
+    <string name="performance_monitor_desc">ゲーム中にFPS、CPU情報を表示</string>
+    <string name="language_settings">言語設定</string>
+    <string name="language">言語</string>
+    <string name="language_desc">アプリの表示言語を選択</string>
+    <string name="about">アプリについて</string>
+    <string name="current_version">現在のバージョン</string>
+    <string name="check_update">アップデートを確認</string>
+    <string name="check_update_desc">GitHubで最新バージョンを確認</string>
+    <string name="open_source">オープンソース</string>
+    <string name="open_source_desc">使用しているオープンソースライブラリを表示</string>
+    <string name="checking_update">アップデートを確認中...</string>
+    <string name="follow_system">システムに従う</string>
+
+    <!-- Open Source Screen -->
+    <string name="open_source_title">オープンソース</string>
+    <string name="open_link">リンクを開く</string>
+
+    <!-- Language Selection Dialog -->
+    <string name="select_language">言語を選択</string>
+
+    <!-- Sidebar -->
+    <string name="control_panel">コントロールパネル</string>
+    <string name="progress_format">進捗: %d%%</string>
+    <string name="web_mode">ウェブモード</string>
+    <string name="game_mode">ゲームモード</string>
+    <string name="disable_mapping">マッピング無効</string>
+    <string name="mapping">マッピング</string>
+    <string name="force_refresh">強制更新</string>
+    <string name="clear_cache">キャッシュ削除</string>
+    <string name="close">閉じる</string>
+    <string name="cache_cleared">キャッシュを削除しました</string>
+    <string name="switched_to_game_mode">ゲームモードに切り替えました</string>
+    <string name="switched_to_web_mode">ウェブモードに切り替えました</string>
+    <string name="mapping_enabled">ジョイスティックマッピングを有効にしました</string>
+    <string name="mapping_disabled">ジョイスティックマッピングを無効にしました</string>
+    <string name="press_back_again_to_exit">もう一度戻るを押すと終了します</string>
+    <string name="press_back_again_game_mode">ゲームモード中：もう一度戻るを押すと終了します</string>
+    <string name="clearing_cache_and_reload">キャッシュを削除して再読み込み中...</string>
+    <string name="select_file">ファイルを選択</string>
+    <string name="cannot_open_file_chooser">ファイル選択画面を開けません</string>
+</resources>
