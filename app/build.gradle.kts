@@ -61,6 +61,7 @@ dependencies {
 
     // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.6")
+    implementation(libs.annotations)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
