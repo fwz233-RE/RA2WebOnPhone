@@ -66,6 +66,10 @@ fastlane/readme.md
 ehthumbs.db
 Thumbs.db
 
+# Local assets to exclude
+摇杆.html
+摇杆.png
+
 # Captures folder (for Android Studio)
 captures/
 
