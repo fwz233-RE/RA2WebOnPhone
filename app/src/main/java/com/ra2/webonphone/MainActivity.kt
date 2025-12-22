@@ -81,6 +81,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             RA2WebOnPhoneTheme {
+                // 自动检查更新
+                AutoUpdateChecker(
+                    context = this,
+                    onForceExit = {
+                        // 强制退出应用
+                        finish()
+                    }
+                )
+                
                 MainScreen(
                     linkRepository = linkRepository,
                     onLinkClick = { link ->
