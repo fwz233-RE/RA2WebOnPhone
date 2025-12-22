@@ -63,4 +63,13 @@
     <string name="clearing_cache_and_reload">正在清除快取重新載入...</string>
     <string name="select_file">選擇檔案</string>
     <string name="cannot_open_file_chooser">無法開啟檔案選擇器</string>
+    
+    <!-- Update Dialog -->
+    <string name="update_available">發現新版本</string>
+    <string name="new_version_available">發現新版本 %s</string>
+    <string name="current_version_update_available">目前版本 %s 有更新可用</string>
+    <string name="update_content">更新內容</string>
+    <string name="update_now">立即更新</string>
+    <string name="force_update_warning">此更新已發布超過3天，必須更新才能繼續使用</string>
+    <string name="exit_app">退出應用程式</string>
 </resources>

@@ -63,4 +63,13 @@
     <string name="clearing_cache_and_reload">Clearing cache and reloading...</string>
     <string name="select_file">Select File</string>
     <string name="cannot_open_file_chooser">Cannot open file chooser</string>
+    
+    <!-- Update Dialog -->
+    <string name="update_available">Update Available</string>
+    <string name="new_version_available">New version %s available</string>
+    <string name="current_version_update_available">Update available for version %s</string>
+    <string name="update_content">What\'s New</string>
+    <string name="update_now">Update Now</string>
+    <string name="force_update_warning">This update has been available for more than 3 days and must be installed to continue</string>
+    <string name="exit_app">Exit App</string>
 </resources>

@@ -45,12 +45,16 @@ import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -58,8 +62,11 @@ import androidx.compose.ui.unit.dp
 import com.ra2.webonphone.data.LinkItem
 import com.ra2.webonphone.data.LinkRepository
 import com.ra2.webonphone.data.SettingsRepository
+import com.ra2.webonphone.data.UpdateInfo
+import com.ra2.webonphone.data.UpdateRepository
 import com.ra2.webonphone.ui.components.AddLinkDialog
 import com.ra2.webonphone.ui.components.LinkCard
+import com.ra2.webonphone.ui.components.UpdateDialog
 import com.ra2.webonphone.ui.theme.RA2WebOnPhoneTheme
 import com.ra2.webonphone.util.LocaleHelper
 
@@ -77,21 +84,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         linkRepository = LinkRepository(this)
+        val updateRepository = UpdateRepository(this)
 
         enableEdgeToEdge()
         setContent {
             RA2WebOnPhoneTheme {
-                // 自动检查更新
-                AutoUpdateChecker(
-                    context = this,
-                    onForceExit = {
-                        // 强制退出应用
-                        finish()
-                    }
-                )
-                
                 MainScreen(
                     linkRepository = linkRepository,
+                    updateRepository = updateRepository,
                     onLinkClick = { link ->
                         openWebView(link)
                     },
@@ -121,12 +121,38 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(
     linkRepository: LinkRepository,
+    updateRepository: UpdateRepository,
     onLinkClick: (LinkItem) -> Unit,
     onSettingsClick: () -> Unit
 ) {
+    val context = LocalContext.current
     var links by remember { mutableStateOf(linkRepository.getLinks()) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+    var canDismissUpdate by remember { mutableStateOf(true) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    
+    // 获取当前版本号
+    val currentVersion = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0"
+        } catch (e: Exception) {
+            "1.0"
+        }
+    }
+
+    // 启动时检查更新
+    LaunchedEffect(Unit) {
+        launch {
+            val (shouldShow, info) = updateRepository.checkForUpdate(currentVersion)
+            if (shouldShow && info != null) {
+                updateInfo = info
+                canDismissUpdate = updateRepository.canDismissDialog(info.version, currentVersion)
+                showUpdateDialog = true
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier
@@ -236,6 +262,18 @@ fun MainScreen(
                     linkRepository.addLink(title, url)
                     links = linkRepository.getLinks()
                     showAddDialog = false
+                }
+            )
+        }
+        
+        // 显示更新对话框
+        if (showUpdateDialog && updateInfo != null) {
+            UpdateDialog(
+                updateInfo = updateInfo!!,
+                currentVersion = currentVersion,
+                canDismiss = canDismissUpdate,
+                onDismiss = {
+                    showUpdateDialog = false
                 }
             )
         }

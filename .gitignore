@@ -70,9 +70,6 @@ Thumbs.db
 摇杆.html
 摇杆.png
 
-# Update checker (not to be uploaded to GitHub)
-**/UpdateChecker.kt
-
 # Captures folder (for Android Studio)
 captures/
 
