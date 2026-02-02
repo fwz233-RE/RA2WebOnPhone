@@ -72,4 +72,7 @@
     <string name="update_now">立即更新</string>
     <string name="force_update_warning">此更新已发布超过3天，必须更新才能继续使用</string>
     <string name="exit_app">退出应用</string>
+    
+    <!-- Gamepad Controller -->
+    <string name="joystick_in_use">摇杆使用中，请先松开摇杆</string>
 </resources>

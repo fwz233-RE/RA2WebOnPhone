@@ -72,4 +72,7 @@
     <string name="update_now">Update Now</string>
     <string name="force_update_warning">This update has been available for more than 3 days and must be installed to continue</string>
     <string name="exit_app">Exit App</string>
+    
+    <!-- Gamepad Controller -->
+    <string name="joystick_in_use">Joystick in use, release it first</string>
 </resources>

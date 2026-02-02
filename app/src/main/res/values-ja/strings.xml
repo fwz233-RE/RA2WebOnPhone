@@ -72,4 +72,7 @@
     <string name="update_now">今すぐ更新</string>
     <string name="force_update_warning">このアップデートは3日以上前にリリースされており、使用を続けるには更新が必要です</string>
     <string name="exit_app">アプリを終了</string>
+    
+    <!-- Gamepad Controller -->
+    <string name="joystick_in_use">ジョイスティック使用中、先に離してください</string>
 </resources>

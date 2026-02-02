@@ -1,5 +1,7 @@
 package com.ra2.webonphone.data
 
+import com.ra2.webonphone.BuildConfig
+
 import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +30,7 @@ class UpdateRepository(context: Context) {
         private const val KEY_VERSION_FIRST_SEEN_DATE = "version_first_seen_date"
         private const val KEY_DIALOG_DISMISSED_VERSION = "dialog_dismissed_version"
         
-        private const val UPDATE_API_URL = ""
+        private val UPDATE_API_URL = BuildConfig.UPDATE_API_URL
         private const val FORCE_UPDATE_DAYS = 4 // 第四天开始强制更新
     }
 
@@ -67,21 +69,9 @@ class UpdateRepository(context: Context) {
                 }
                 
                 return@withContext Pair(true, updateInfo)
-            } else {
-                // 同版本：检查是否仍在提示期内
-                val versionFirstSeenDate = prefs.getString(KEY_VERSION_FIRST_SEEN_DATE, "")
-                if (!versionFirstSeenDate.isNullOrEmpty() && versionFirstSeenDate.startsWith(currentVersion)) {
-                    val firstSeenDate = versionFirstSeenDate.substringAfter(":")
-                    val daysPassed = calculateDaysBetween(firstSeenDate, today)
-                    
-                    // 如果还在提示期内（任意天数都可能显示），返回true
-                    if (daysPassed >= 0) {
-                        return@withContext Pair(true, updateInfo)
-                    }
-                }
-                
-                return@withContext Pair(false, null)
             }
+            // 同版本：已是最新版本，不显示更新对话框
+            return@withContext Pair(false, null)
         } catch (e: Exception) {
             e.printStackTrace()
             // 如果网络请求失败，尝试使用缓存

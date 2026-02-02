@@ -61,9 +61,24 @@ class GamepadMouseController(
     private var mappingEnabled = false
     var onMappingEvent: ((buttonName: String, eventType: String, isRepeat: Boolean) -> Unit)? = null  // 按钮映射事件回调 (按钮名称, 事件类型 "down"/"up", 是否重复触发)
     var onJoystickMove: ((Float, Float, Boolean) -> Unit)? = null  // 左摇杆移动回调 (x, y, isActive)
+    
+    // 摇杆锁定时的Toast消息回调
+    var onJoystickLockMessage: (() -> Unit)? = null
+    
+    // 肩键立即执行回调（在PENDING_CLEAR状态下取消等待并执行肩键事件）
+    // 返回true表示触发了清除操作，肩键功能需要延迟执行
+    // 返回false表示不需要延迟
+    var onShoulderKeyImmediate: (() -> Boolean)? = null
+    
+    // 摇杆锁定Toast显示计数器（只显示前3次，避免打扰用户）
+    private var joystickLockToastCount = 0
+    private val maxJoystickLockToastCount = 3
 
     // 左摇杆拖动状态
     private var isJoystickDragging = false
+    
+    // 摇杆活跃状态（在映射模式下，摇杆在死区外时为true）
+    private var isJoystickActive = false
 
     // 左摇杆状态（快速移动）
     private var leftAxisX: Float = 0f
@@ -262,11 +277,27 @@ class GamepadMouseController(
     /**
      * 处理摇杆映射（只移动已存在的touch点，不创建或销毁touch）
      * touch点的创建和销毁由setMappingEnabled控制
+     * 
+     * 摇杆活跃状态追踪：
+     * - 当摇杆在死区外时，isJoystickActive = true，此时其他按键被锁定
+     * - 当摇杆回中时，isJoystickActive = false，解除按键锁定
      */
     private fun handleJoystickMapping() {
+        // 更新摇杆活跃状态（摇杆在死区外时为活跃）
+        val wasActive = isJoystickActive
+        isJoystickActive = leftAxisX != 0f || leftAxisY != 0f
+        
         // 直接发送当前摇杆位置，让touch点跟随移动
         // 即使摇杆在死区内（0,0），也发送移动事件让touch回到中心
         onJoystickMove?.invoke(leftAxisX, leftAxisY, true)
+    }
+    
+    /**
+     * 检查摇杆是否活跃（正在被使用）
+     * 在映射模式下，当摇杆在死区外时返回true
+     */
+    fun isJoystickInUse(): Boolean {
+        return mappingEnabled && controlMode == ControlMode.GAME_MODE && isJoystickActive
     }
 
     /**
@@ -375,12 +406,60 @@ class GamepadMouseController(
      * - B键 -> 家 按钮
      * - X键 -> 署 按钮
      * - Y键 -> 同 按钮
-     * - Start键 -> 强 按钮
-     * - Select键 -> 取 按钮
+     * - Select键 -> 强 按钮（原 Start 功能）
+     * - L1/L2 -> 取 按钮 + 模拟点击
+     *
+     * 摇杆锁定机制：
+     * - 当摇杆正在使用时（在死区外），所有按键被锁定（除了Start键用于侧边栏）
+     * - 锁定时按下任何按钮会触发Toast提示（只显示前3次，避免打扰用户）
+     * - Start键不在此处理，由 WebViewActivity 处理侧边栏切换
+     *
+     * 肩键特殊处理：
+     * - 当摇杆不活跃时（已回中或在PENDING_CLEAR等待状态），肩键可以使用
+     * - 肩键按下时先触发onShoulderKeyImmediate回调，取消等待中的touch点
+     * - 确保没有其他挂起事件后，再执行肩键原有的功能
      *
      * 注意：不同手柄可能使用不同的键码，这里全面覆盖
+     * Start键由 WebViewActivity 处理，用于切换侧边栏
      */
     private fun handleGameModeKeyEvent(event: KeyEvent): Boolean {
+        // Start键不锁定（用于侧边栏），该键由WebViewActivity处理，这里不处理
+        val isStartKey = event.keyCode == KeyEvent.KEYCODE_BUTTON_START
+        
+        // 检查是否为肩键（L1/L2/R1/R2及其变体）
+        val isShoulderKey = when (event.keyCode) {
+            KeyEvent.KEYCODE_BUTTON_L1,
+            KeyEvent.KEYCODE_BUTTON_L2,
+            KeyEvent.KEYCODE_BUTTON_R1,
+            KeyEvent.KEYCODE_BUTTON_R2,
+            KeyEvent.KEYCODE_BUTTON_Z,      // 某些手柄的Z键可能是R2
+            KeyEvent.KEYCODE_BUTTON_C,      // 某些手柄的C键
+            KeyEvent.KEYCODE_BUTTON_MODE -> true  // 某些手柄的Mode键
+            else -> false
+        }
+        
+        // 摇杆锁定检查：摇杆活跃时（在死区外移动中），锁定除Start之外的所有按键
+        if (mappingEnabled && isJoystickActive && !isStartKey) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                // 首次按下时显示Toast提示（只显示前3次）
+                if (joystickLockToastCount < maxJoystickLockToastCount) {
+                    joystickLockToastCount++
+                    onJoystickLockMessage?.invoke()
+                }
+            }
+            // 消费事件，不执行任何操作
+            return true
+        }
+        
+        // 肩键特殊处理：摇杆不活跃时（已回中，可能在PENDING_CLEAR等待状态）
+        // 在执行肩键功能前，先取消等待中的touch点
+        // 如果触发了清除操作，延迟执行肩键功能，确保touch点已被正确清除
+        var needDelayForShoulderKey = false
+        if (mappingEnabled && isShoulderKey && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            // 触发回调：取消等待中的touch清除任务，并立即清除touch点
+            needDelayForShoulderKey = onShoulderKeyImmediate?.invoke() ?: false
+        }
+        
         // 映射模式下的按键处理 - 支持按下、按住（重复）和释放
         if (mappingEnabled) {
             val buttonName = when (event.keyCode) {
@@ -388,8 +467,7 @@ class GamepadMouseController(
                 KeyEvent.KEYCODE_BUTTON_B -> "家"
                 KeyEvent.KEYCODE_BUTTON_X -> "署"
                 KeyEvent.KEYCODE_BUTTON_Y -> "同"
-                KeyEvent.KEYCODE_BUTTON_START -> "强"
-                KeyEvent.KEYCODE_BUTTON_SELECT -> "取"
+                KeyEvent.KEYCODE_BUTTON_SELECT -> "强"  // 原 Start 功能
                 else -> null
             }
             
@@ -416,7 +494,16 @@ class GamepadMouseController(
                 when (event.action) {
                     KeyEvent.ACTION_DOWN -> {
                         if (!isR1Pressed) {
-                            startR1Press()
+                            if (needDelayForShoulderKey) {
+                                // 延迟执行，确保touch点已被正确清除
+                                handler.postDelayed({
+                                    if (!isR1Pressed) {
+                                        startR1Press()
+                                    }
+                                }, 100)
+                            } else {
+                                startR1Press()
+                            }
                         }
                         return true
                     }
@@ -438,7 +525,16 @@ class GamepadMouseController(
                     KeyEvent.ACTION_DOWN -> {
                         // 直接调用R1的按下逻辑
                         if (!isR1Pressed) {
-                            startR1Press()
+                            if (needDelayForShoulderKey) {
+                                // 延迟执行，确保touch点已被正确清除
+                                handler.postDelayed({
+                                    if (!isR1Pressed) {
+                                        startR1Press()
+                                    }
+                                }, 100)
+                            } else {
+                                startR1Press()
+                            }
                         }
                         return true
                     }
@@ -451,27 +547,51 @@ class GamepadMouseController(
                     }
                 }
             }
-            // L1 - 模拟长按650ms
-            KeyEvent.KEYCODE_BUTTON_L1 -> {
-                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                    simulateLongPress(650)
-                }
-                return true
-            }
-            // L2 - 同R2，作为备选（某些手柄R2可能映射到L2）
+            // L1/L2 - 映射模式下触发"取"按钮 + 在按住期间模拟点击
+            KeyEvent.KEYCODE_BUTTON_L1,
             KeyEvent.KEYCODE_BUTTON_L2 -> {
-                when (event.action) {
-                    KeyEvent.ACTION_DOWN -> {
-                        if (!isR1Pressed) {
-                            startR1Press()
+                if (mappingEnabled) {
+                    // 映射模式下触发"取"按钮，并在短暂时间区间内执行模拟点击
+                    when (event.action) {
+                        KeyEvent.ACTION_DOWN -> {
+                            if (event.repeatCount == 0) {
+                                // 首次按下：触发"取"按钮 down，然后延迟执行点击
+                                onMappingEvent?.invoke("取", "down", false)
+                                // 延迟一小段时间后执行模拟点击
+                                handler.postDelayed({
+                                    simulateClick()
+                                }, 50)  // 50ms 后执行点击
+                            }
+                            return true
+                        }
+                        KeyEvent.ACTION_UP -> {
+                            // 松开时触发"取"按钮 up
+                            onMappingEvent?.invoke("取", "up", false)
+                            return true
+                        }
+                    }
+                } else {
+                    // 非映射模式下，L1模拟长按650ms（保持原有行为）
+                    if (event.keyCode == KeyEvent.KEYCODE_BUTTON_L1) {
+                        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                            simulateLongPress(650)
                         }
                         return true
                     }
-                    KeyEvent.ACTION_UP -> {
-                        if (isR1Pressed) {
-                            endR1Press()
+                    // 非映射模式下，L2作为R2备选
+                    when (event.action) {
+                        KeyEvent.ACTION_DOWN -> {
+                            if (!isR1Pressed) {
+                                startR1Press()
+                            }
+                            return true
                         }
-                        return true
+                        KeyEvent.ACTION_UP -> {
+                            if (isR1Pressed) {
+                                endR1Press()
+                            }
+                            return true
+                        }
                     }
                 }
             }
@@ -481,10 +601,11 @@ class GamepadMouseController(
             KeyEvent.KEYCODE_DPAD_CENTER -> {
                 return mappingEnabled  // 映射模式下消费事件，否则不处理
             }
-            // Start/Select键 - 映射模式下已处理
-            KeyEvent.KEYCODE_BUTTON_START, KeyEvent.KEYCODE_BUTTON_SELECT -> {
+            // Select键 - 映射模式下已处理（映射为"强"按钮）
+            KeyEvent.KEYCODE_BUTTON_SELECT -> {
                 return mappingEnabled
             }
+            // Start键 - 不在此处理，由 WebViewActivity 处理侧边栏切换
         }
         return false
     }
@@ -524,11 +645,9 @@ class GamepadMouseController(
                     // 如果R1按着（R2/L2触发器也共享R1状态），发送ACTION_MOVE事件以支持拖拽选择框
                     if (isR1Pressed) {
                         updateR1DragPosition()
-                    } else {
-                        // 如果没有按着任何键，发送鼠标悬浮移动事件
-                        // 这支持：1. 拾取效果（建筑跟随鼠标）2. 普通的鼠标移动
-                        sendMouseHoverMove()
                     }
+                    // 注意：虚拟鼠标移动时不再自动发送hover事件
+                    // 只有在肩键（R1/R2/L2）点击时才会触发触摸事件
 
                     return true
                 }

@@ -107,10 +107,6 @@ class WebViewActivity : ComponentActivity() {
     private var pageLoadSuccess = false
     private val handler = Handler(Looper.getMainLooper())
 
-    // 长按X按钮相关
-    private var xButtonDownTime: Long = 0
-    private var isXButtonLongPressed = false
-    private val LONG_PRESS_THRESHOLD = 500L
 
     // 文件选择器相关
     private var filePathCallback: ValueCallback<Array<Uri>>? = null
@@ -1239,6 +1235,30 @@ class WebViewActivity : ComponentActivity() {
         gamepadMouseController.onJoystickMove = { x, y, isActive ->
             controlJoystick(x, y, isActive)
         }
+        
+        // 设置摇杆锁定时的Toast消息回调
+        // 当摇杆活跃时按下其他按键，会显示提示（只显示前3次，避免打扰用户）
+        gamepadMouseController.onJoystickLockMessage = {
+            Toast.makeText(this, getString(R.string.joystick_in_use), Toast.LENGTH_SHORT).show()
+        }
+        
+        // 设置肩键立即执行回调
+        // 当摇杆处于PENDING_CLEAR状态（等待延迟清除）时，按下肩键会：
+        // 1. 取消等待中的清除任务
+        // 2. 立即清除touch点
+        // 返回true表示触发了清除操作，肩键功能需要延迟执行
+        // 确保没有其他挂起事件后，肩键的功能才会被执行
+        gamepadMouseController.onShoulderKeyImmediate = {
+            // 如果处于等待清除状态，立即清除touch点，并返回true表示需要延迟
+            if (joystickTouchState == JoystickTouchState.PENDING_CLEAR) {
+                cancelClearTouchTask()
+                sendJoystickEvent("end", 0f, 0f)
+                joystickTouchState = JoystickTouchState.INACTIVE
+                true  // 触发了清除操作，需要延迟执行肩键功能
+            } else {
+                false  // 不需要延迟
+            }
+        }
 
         // 添加到容器（在最上层）
         container.addView(sidebarView)
@@ -1609,61 +1629,16 @@ class WebViewActivity : ComponentActivity() {
             return true  // 完全消费返回键事件，不传递给WebView
         }
 
-        // 处理X按钮显示侧边栏
-        // 网页模式 或 游戏模式未开启映射: 短按X切换侧边栏
-        // 游戏模式已开启映射: 长按X切换侧边栏
-        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_X) {
-            val useLongPress = gamepadMouseController.isGameMode() && gamepadMouseController.isMappingEnabled()
-            
-            when (event.action) {
-                KeyEvent.ACTION_DOWN -> {
-                    if (event.repeatCount == 0) {
-                        xButtonDownTime = System.currentTimeMillis()
-                        isXButtonLongPressed = false
-                        
-                        if (useLongPress) {
-                            // 映射模式下使用长按打开侧边栏
-                            handler.postDelayed({
-                                if (xButtonDownTime > 0 &&
-                                    System.currentTimeMillis() - xButtonDownTime >= LONG_PRESS_THRESHOLD) {
-                                    isXButtonLongPressed = true
-                                    // 长按X切换侧边栏
-                                    if (sidebarView.isVisible()) {
-                                        sidebarView.hide()
-                                    } else {
-                                        sidebarView.show()
-                                    }
-                                }
-                            }, LONG_PRESS_THRESHOLD)
-                        } else {
-                            // 非映射模式：短按切换侧边栏
-                            if (sidebarView.isVisible()) {
-                                sidebarView.hide()
-                            } else {
-                                sidebarView.show()
-                            }
-                            return true
-                        }
-                    }
-                    // 映射模式下让事件继续传递到 gamepadMouseController 处理映射
-                    // 不要 return，让代码继续执行
-                }
-                KeyEvent.ACTION_UP -> {
-                    val wasLongPress = isXButtonLongPressed
-                    xButtonDownTime = 0
-                    isXButtonLongPressed = false
-                    
-                    if (!useLongPress) {
-                        // 非映射模式：已在 DOWN 时处理，直接消费
-                        return true
-                    }
-                    // 映射模式：如果是长按触发的侧边栏，消费事件；否则让事件继续传递
-                    if (wasLongPress) {
-                        return true
-                    }
-                    // 让事件继续传递到 gamepadMouseController
+        // 处理 Start 按钮切换侧边栏（悬浮窗）
+        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_START) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                if (sidebarView.isVisible()) {
+                    sidebarView.hide()
+                } else {
+                    sidebarView.show()
                 }
             }
+            return true
         }
 
         if (isGamepadFocusEnabled) {
