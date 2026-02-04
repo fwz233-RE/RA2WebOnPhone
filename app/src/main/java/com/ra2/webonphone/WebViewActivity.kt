@@ -40,6 +40,23 @@ import com.ra2.webonphone.ui.SidebarView
 import com.ra2.webonphone.ui.SystemStatsView
 import com.ra2.webonphone.util.LocaleHelper
 import kotlin.math.abs
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.ra2.webonphone.ui.theme.RA2WebOnPhoneTheme
+import com.ra2.webonphone.data.ControlMethod
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 class WebViewActivity : ComponentActivity() {
 
@@ -151,6 +168,7 @@ class WebViewActivity : ComponentActivity() {
 
         // 初始化手柄控制器
         gamepadMouseController = GamepadMouseController(container, webView!!)
+        gamepadMouseController.inputMethod = settingsRepository.getControlMethod()
         gamepadMouseController.start()
 
         // 设置触摸目标提供器，确保全屏时触摸事件发送到正确的视图
@@ -168,8 +186,167 @@ class WebViewActivity : ComponentActivity() {
         // 设置系统UI变化监听器，确保游戏模式下状态栏不会意外显示
         setupSystemUiListener()
 
+        // 检查控制方式设置（首次启动需选择）
+        checkForControlMethodSetup()
+
         // 加载URL
         loadUrl(currentUrl)
+    }
+
+    private fun checkForControlMethodSetup() {
+        if (settingsRepository.getControlMethod() == com.ra2.webonphone.data.ControlMethod.UNKNOWN) {
+            showControlMethodSelectionDialog(false)
+        }
+    }
+
+    private fun showControlMethodSelectionDialog(cancelable: Boolean = true) {
+        val composeView = ComposeView(this).apply {
+            // Fix: Set the necessary ViewTree owners for Compose to work inside a Dialog
+            setViewTreeLifecycleOwner(this@WebViewActivity)
+            setViewTreeViewModelStoreOwner(this@WebViewActivity)
+            setViewTreeSavedStateRegistryOwner(this@WebViewActivity)
+        }
+        val dialog = android.app.AlertDialog.Builder(this)
+            .setView(composeView)
+            .setCancelable(cancelable)
+            .create()
+
+        // Fix: Set the necessary ViewTree owners on the dialog window's decor view
+        dialog.window?.decorView?.let { decorView ->
+            decorView.setViewTreeLifecycleOwner(this)
+            decorView.setViewTreeViewModelStoreOwner(this)
+            decorView.setViewTreeSavedStateRegistryOwner(this)
+        }
+        
+        // Transparent background so we can use Material3 Surface shapes
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        composeView.setContent {
+            RA2WebOnPhoneTheme {
+                // Collect current setting
+                val currentMethod by settingsRepository.controlMethod.collectAsState()
+                // Local state for selection
+                var selectedMethod by remember(currentMethod) { 
+                    mutableStateOf(if (currentMethod == ControlMethod.UNKNOWN) ControlMethod.JOYSTICK else currentMethod) 
+                }
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    tonalElevation = 6.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp), // Reduced padding
+                        verticalArrangement = Arrangement.spacedBy(12.dp) // Reduced spacing
+                    ) {
+                        // Title (Fixed)
+                        Text(
+                            text = stringResource(R.string.select_control_method),
+                            style = MaterialTheme.typography.titleLarge, // Slightly smaller title
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        // Scrollable Content Content (Options + Info)
+                        Column(
+                            modifier = Modifier
+                                .weight(1f, fill = false) // Allow shrinking, but take available space
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Options
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                // Joystick Option
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .selectable(
+                                            selected = selectedMethod == ControlMethod.JOYSTICK,
+                                            onClick = { selectedMethod = ControlMethod.JOYSTICK }
+                                        )
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = selectedMethod == ControlMethod.JOYSTICK,
+                                        onClick = { selectedMethod = ControlMethod.JOYSTICK }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.control_mode_joystick),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                                
+                                // Keyboard Option
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .selectable(
+                                            selected = selectedMethod == ControlMethod.KEYBOARD,
+                                            onClick = { selectedMethod = ControlMethod.KEYBOARD }
+                                        )
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = selectedMethod == ControlMethod.KEYBOARD,
+                                        onClick = { selectedMethod = ControlMethod.KEYBOARD }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.control_mode_keyboard),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+
+                            // Info Text (Card)
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (selectedMethod == ControlMethod.KEYBOARD) 
+                                           stringResource(R.string.mapping_info_keyboard) 
+                                           else stringResource(R.string.mapping_info_joystick),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
+                        }
+
+                        // Buttons (Fixed Footer)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            if (cancelable) {
+                                TextButton(onClick = { dialog.dismiss() }) {
+                                    Text(stringResource(R.string.cancel))
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            TextButton(onClick = {
+                                settingsRepository.setControlMethod(selectedMethod)
+                                gamepadMouseController.inputMethod = selectedMethod
+                                Toast.makeText(this@WebViewActivity, getString(R.string.settings_saved), Toast.LENGTH_SHORT).show()
+                                dialog.dismiss()
+                            }) {
+                                Text(stringResource(R.string.confirm))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        dialog.show()
     }
 
     @Suppress("DEPRECATION")
@@ -1226,6 +1403,11 @@ class WebViewActivity : ComponentActivity() {
             }
         }
 
+        // 操控方式设置
+        sidebarView.onControlMethodSettingsClick = {
+            showControlMethodSelectionDialog(true)
+        }
+
         // 设置映射事件回调（支持按下、按住、释放）
         gamepadMouseController.onMappingEvent = { buttonName, eventType, isRepeat ->
             triggerJoystickButtonEvent(buttonName, eventType, isRepeat)
@@ -1630,7 +1812,13 @@ class WebViewActivity : ComponentActivity() {
         }
 
         // 处理 Start 按钮切换侧边栏（悬浮窗）
-        if (event.keyCode == KeyEvent.KEYCODE_BUTTON_START) {
+        // 兼容全键盘模式下的 Q 键
+        val isStart = event.keyCode == KeyEvent.KEYCODE_BUTTON_START || 
+                      (::gamepadMouseController.isInitialized && 
+                       gamepadMouseController.inputMethod == com.ra2.webonphone.data.ControlMethod.KEYBOARD && 
+                       event.keyCode == KeyEvent.KEYCODE_Q)
+
+        if (isStart) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 if (sidebarView.isVisible()) {
                     sidebarView.hide()

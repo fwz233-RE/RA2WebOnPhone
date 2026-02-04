@@ -69,10 +69,34 @@
     <string name="new_version_available">New version %s available</string>
     <string name="current_version_update_available">Update available for version %s</string>
     <string name="update_content">What\'s New</string>
-    <string name="update_now">Update Now</string>
+    <string name="update_now">Update</string>
     <string name="force_update_warning">This update has been available for more than 3 days and must be installed to continue</string>
     <string name="exit_app">Exit App</string>
     
+    <!-- Control Method -->
+    <string name="control_method">Control Method</string>
+    <string name="select_control_method">Select Control Method</string>
+    <string name="control_mode_joystick">Joystick (Gamepad)</string>
+    <string name="control_mode_keyboard">Full Keyboard</string>
+    <string name="settings_saved">Settings Saved</string>
+    <string name="confirm">OK</string>
+
+    <string name="mapping_info_joystick">[Joystick Mode]
+L-Stick: Move Cursor
+R1: Click/Confirm
+A: Attack  B: Base
+X: Deploy  Y: Select Same
+Start: Menu  Select: Force
+L1: Select</string>
+
+    <string name="mapping_info_keyboard">[Keyboard Mode]
+ESXF: Move Cursor
+P: Click/Confirm
+J: Attack  K: Base
+U: Deploy  I: Select Same
+Q: Menu  A: Force
+O: Select</string>
+
     <!-- Gamepad Controller -->
     <string name="joystick_in_use">Joystick in use, release it first</string>
 </resources>

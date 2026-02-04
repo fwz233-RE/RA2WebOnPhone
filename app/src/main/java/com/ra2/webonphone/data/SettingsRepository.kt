@@ -14,6 +14,12 @@ enum class AppLanguage(val code: String, val displayName: String) {
     JAPANESE("ja", "日本語")
 }
 
+enum class ControlMethod(val value: String) {
+    UNKNOWN("unknown"),
+    JOYSTICK("joystick"),
+    KEYBOARD("keyboard")
+}
+
 class SettingsRepository(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(
@@ -29,10 +35,17 @@ class SettingsRepository(context: Context) {
     )
     val appLanguage: StateFlow<AppLanguage> = _appLanguage.asStateFlow()
 
+    private val _controlMethod = MutableStateFlow(
+        ControlMethod.entries.find { it.value == prefs.getString(KEY_CONTROL_METHOD, ControlMethod.UNKNOWN.value) }
+            ?: ControlMethod.UNKNOWN
+    )
+    val controlMethod: StateFlow<ControlMethod> = _controlMethod.asStateFlow()
+
     companion object {
         private const val PREFS_NAME = "ra2_settings_prefs"
         private const val KEY_SHOW_SYSTEM_STATS = "show_system_stats"
         private const val KEY_APP_LANGUAGE = "app_language"
+        private const val KEY_CONTROL_METHOD = "control_method"
     }
 
     fun setShowSystemStats(show: Boolean) {
@@ -52,5 +65,15 @@ class SettingsRepository(context: Context) {
     fun getAppLanguage(): AppLanguage {
         val code = prefs.getString(KEY_APP_LANGUAGE, AppLanguage.SYSTEM.code)
         return AppLanguage.entries.find { it.code == code } ?: AppLanguage.SYSTEM
+    }
+
+    fun setControlMethod(method: ControlMethod) {
+        prefs.edit().putString(KEY_CONTROL_METHOD, method.value).apply()
+        _controlMethod.value = method
+    }
+
+    fun getControlMethod(): ControlMethod {
+        val value = prefs.getString(KEY_CONTROL_METHOD, ControlMethod.UNKNOWN.value)
+        return ControlMethod.entries.find { it.value == value } ?: ControlMethod.UNKNOWN
     }
 }

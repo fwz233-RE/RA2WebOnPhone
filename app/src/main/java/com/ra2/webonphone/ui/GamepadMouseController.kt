@@ -47,6 +47,15 @@ class GamepadMouseController(
     var controlMode: ControlMode = ControlMode.WEB_MODE
         private set
 
+    // 输入设备模式 (摇杆 vs 全键盘)
+    var inputMethod: com.ra2.webonphone.data.ControlMethod = com.ra2.webonphone.data.ControlMethod.JOYSTICK
+
+    // 全键盘模式：按键状态追踪
+    private var isEPressed = false
+    private var isXPressed = false
+    private var isSPressed = false
+    private var isFPressed = false
+
     // 触摸目标视图获取器（用于支持全屏时发送事件到正确的视图）
     var touchTargetProvider: (() -> View)? = null
 
@@ -355,9 +364,91 @@ class GamepadMouseController(
      * 处理手柄按键事件
      */
     fun handleKeyEvent(event: KeyEvent): Boolean {
+        // 全键盘模式拦截处理
+        if (inputMethod == com.ra2.webonphone.data.ControlMethod.KEYBOARD) {
+            if (handleFullKeyboardKeyEvent(event)) {
+                return true
+            }
+        }
+
         when (controlMode) {
             ControlMode.WEB_MODE -> return handleWebModeKeyEvent(event)
             ControlMode.GAME_MODE -> return handleGameModeKeyEvent(event)
+        }
+    }
+
+    /**
+     * 全键盘模式按键处理
+     */
+    private fun handleFullKeyboardKeyEvent(event: KeyEvent): Boolean {
+        val isDown = event.action == KeyEvent.ACTION_DOWN
+        
+        // 1. 处理摇杆模拟 (E/X/S/F)
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_E -> { isEPressed = isDown; updateKeyboardJoystick(); return true }
+            KeyEvent.KEYCODE_X -> { isXPressed = isDown; updateKeyboardJoystick(); return true }
+            KeyEvent.KEYCODE_S -> { isSPressed = isDown; updateKeyboardJoystick(); return true }
+            KeyEvent.KEYCODE_F -> { isFPressed = isDown; updateKeyboardJoystick(); return true }
+        }
+
+        // 2. 映射按键到手柄按键 (J/K/U/L/O/P/Q/A)
+        // 注意：Q(Start) 和 A(Select) 的特殊处理
+        val mappedKeyCode = when (event.keyCode) {
+            KeyEvent.KEYCODE_J -> KeyEvent.KEYCODE_BUTTON_A   // A 键
+            KeyEvent.KEYCODE_K -> KeyEvent.KEYCODE_BUTTON_B   // B 键
+            KeyEvent.KEYCODE_U -> KeyEvent.KEYCODE_BUTTON_X   // X 键
+            KeyEvent.KEYCODE_I -> KeyEvent.KEYCODE_BUTTON_Y   // Y 键
+            KeyEvent.KEYCODE_O -> KeyEvent.KEYCODE_BUTTON_L1  // L1 键
+            KeyEvent.KEYCODE_P -> KeyEvent.KEYCODE_BUTTON_R1  // R1 键
+            KeyEvent.KEYCODE_Q -> KeyEvent.KEYCODE_BUTTON_START // Start 键
+            KeyEvent.KEYCODE_A -> KeyEvent.KEYCODE_BUTTON_SELECT // Select 键
+            else -> null
+        }
+
+        if (mappedKeyCode != null) {
+            // 创建映射后的事件
+            val newEvent = KeyEvent(
+                event.downTime, event.eventTime,
+                event.action, mappedKeyCode, event.repeatCount,
+                event.metaState, event.deviceId, event.scanCode,
+                event.flags, event.source
+            )
+            
+            // Start键通常由Activity处理侧边栏，这里如果 controlMode == WEB_MODE 且是 Start，
+            // 或者 Activity 没有拦截到（因为这里是被调用），我们可能需要让 Activity 知道。
+            // 但目前的架构是 Activity 先处理 Start。
+            // 如果 inputMethod 是 KEYBOARD，Activity 不知道 Q 是 Start。
+            // 所以应该在 Activity 中处理 Q 键。
+            // 这里我们主要处理控制器的逻辑。
+            
+            when (controlMode) {
+                ControlMode.WEB_MODE -> return handleWebModeKeyEvent(newEvent)
+                ControlMode.GAME_MODE -> return handleGameModeKeyEvent(newEvent)
+            }
+        }
+
+        return false
+    }
+
+    /**
+     * 更新键盘模拟的摇杆状态
+     */
+    private fun updateKeyboardJoystick() {
+        // E(上), X(下), S(左), F(右)
+        // Y轴: E -> -1, X -> 1
+        val y = (if (isXPressed) 1f else 0f) - (if (isEPressed) 1f else 0f)
+        // X轴: S -> -1, F -> 1
+        val x = (if (isFPressed) 1f else 0f) - (if (isSPressed) 1f else 0f)
+
+        leftAxisX = x
+        leftAxisY = y
+        
+        // 更新活跃状态
+        isJoystickActive = leftAxisX != 0f || leftAxisY != 0f
+
+        // 只有在游戏模式且开启映射时，才主动驱动虚拟摇杆
+        if (mappingEnabled && controlMode == ControlMode.GAME_MODE) {
+            handleJoystickMapping()
         }
     }
 

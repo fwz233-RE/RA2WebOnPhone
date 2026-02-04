@@ -34,11 +34,6 @@ class SystemStatsView @JvmOverloads constructor(
     private val handler = Handler(Looper.getMainLooper())
     private var isRunning = false
 
-    // 帧率计算
-    private var frameCount = 0
-    private var lastFpsTime = System.nanoTime()
-    private var currentFps = 0
-
     // CPU使用率计算
     private var lastCpuTotal: Long = 0
     private var lastCpuIdle: Long = 0
@@ -49,29 +44,7 @@ class SystemStatsView @JvmOverloads constructor(
     private var batteryReceiver: BroadcastReceiver? = null
 
     // 分辨率目标视图
-    private var targetView: View? = null
-
-    // Choreographer帧回调
-    private val frameCallback = object : Choreographer.FrameCallback {
-        override fun doFrame(frameTimeNanos: Long) {
-            if (!isRunning) return
-
-            frameCount++
-            val now = System.nanoTime()
-            val elapsed = now - lastFpsTime
-
-            // 每秒更新一次帧率
-            if (elapsed >= 1_000_000_000L) {
-                currentFps = (frameCount * 1_000_000_000L / elapsed).toInt()
-                frameCount = 0
-                lastFpsTime = now
-            }
-
-            Choreographer.getInstance().postFrameCallback(this)
-        }
-    }
-
-    // 定时更新任务
+    private var targetView: View? = null    // 定时更新任务
     private val updateTask = object : Runnable {
         override fun run() {
             if (!isRunning) return
@@ -105,10 +78,7 @@ class SystemStatsView @JvmOverloads constructor(
         // 注册电池广播
         registerBatteryReceiver()
 
-        // 启动帧率计算
-        lastFpsTime = System.nanoTime()
-        frameCount = 0
-        Choreographer.getInstance().postFrameCallback(frameCallback)
+
 
         // 启动定时更新
         handler.post(updateTask)
@@ -145,15 +115,12 @@ class SystemStatsView @JvmOverloads constructor(
     }
 
     private fun updateStats() {
-        val fps = currentFps
         val resolution = getResolution()
         val cpuTemp = getCpuTemperature()
         cpuUsage = getCpuUsage()
 
         // 格式化显示
         val statsText = buildString {
-            append("${fps}FPS")
-            append(" | ")
             append(resolution)
             append(" | ")
             append("CPU:${cpuUsage}%")

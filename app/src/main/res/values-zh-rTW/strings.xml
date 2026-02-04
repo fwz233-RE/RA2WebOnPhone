@@ -69,10 +69,34 @@
     <string name="new_version_available">發現新版本 %s</string>
     <string name="current_version_update_available">目前版本 %s 有更新可用</string>
     <string name="update_content">更新內容</string>
-    <string name="update_now">立即更新</string>
+    <string name="update_now">更新</string>
     <string name="force_update_warning">此更新已發布超過3天，必須更新才能繼續使用</string>
     <string name="exit_app">退出應用程式</string>
     
+    <!-- Control Method -->
+    <string name="control_method">操控方式</string>
+    <string name="select_control_method">選擇操控方式</string>
+    <string name="control_mode_joystick">手把 (Joystick)</string>
+    <string name="control_mode_keyboard">全鍵盤 (Full Keyboard)</string>
+    <string name="settings_saved">設定已儲存</string>
+    <string name="confirm">確定</string>
+
+    <string name="mapping_info_joystick">[搖桿模式]
+左搖桿: 移動游標/視角
+R1: 點擊/確認
+A: 攻擊  B: 基地
+X: 部署  Y: 同類
+Start: 選單  Select: 強攻
+L1: 選取</string>
+
+    <string name="mapping_info_keyboard">[全鍵盤模式]
+ESXF: 移動游標/視角
+P: 點擊/確認
+J: 攻擊  K: 基地
+U: 部署  I: 同類
+Q: 選單  A: 強攻
+O: 選取</string>
+
     <!-- Gamepad Controller -->
     <string name="joystick_in_use">搖桿使用中，請先鬆開搖桿</string>
 </resources>

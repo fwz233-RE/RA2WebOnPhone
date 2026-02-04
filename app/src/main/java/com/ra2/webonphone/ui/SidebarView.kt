@@ -3,22 +3,61 @@ package com.ra2.webonphone.ui
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.webkit.WebView
 import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
-import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cached
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Gamepad
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ra2.webonphone.R
+import com.ra2.webonphone.ui.theme.RA2WebOnPhoneTheme
 
 /**
- * WebView控制侧边栏
+ * WebView控制侧边栏 (Material Design You)
  * 根据屏幕高度自动计算，按钮占满整屏
  */
 class SidebarView @JvmOverloads constructor(
@@ -29,299 +68,86 @@ class SidebarView @JvmOverloads constructor(
 
     private var webView: WebView? = null
     private var isShowing = false
-    private var sidebarWidth = 320
+    private var sidebarWidthPx = 0
     private var animationDuration = 200L
 
-    // UI组件
-    private lateinit var sidebarPanel: LinearLayout
-    private lateinit var progressBar: ProgressBar
-    private lateinit var progressText: TextView
-    private lateinit var urlText: TextView
+    // Compose View
+    private lateinit var composeView: ComposeView
 
-    // 回调
+    // State managed by Compose
+    private var _progress by mutableStateOf(0)
+    private var _url by mutableStateOf("")
+    private var _isGameMode by mutableStateOf(false)
+    private var _isMappingEnabled by mutableStateOf(false)
+
+    // Callbacks
     var onForceRefreshClick: (() -> Unit)? = null
     var onClearCacheClick: (() -> Unit)? = null
     var onCloseClick: (() -> Unit)? = null
     var onGameModeToggle: (() -> Unit)? = null
     var onMappingToggle: (() -> Unit)? = null
-
-    // 游戏模式按钮引用
-    private lateinit var gameModeButton: TextView
-    private lateinit var mappingButton: TextView
-    private var isGameMode = false
-    private var isMappingEnabled = false
+    var onControlMethodSettingsClick: (() -> Unit)? = null
 
     init {
         setupView()
     }
 
     private fun setupView() {
-        // 半透明背景遮罩，点击关闭
+        // Transparent scrim background, click to close
         setBackgroundColor(Color.TRANSPARENT)
         setOnClickListener { hide() }
 
-        // 侧边栏面板 - 使用 weight 让内容占满
-        sidebarPanel = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#F0222222"))
-            elevation = 16f
-            setPadding(16, 16, 16, 16)
-            isClickable = true
-        }
+        // Calculate dynamic width
+        val displayMetrics = context.resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        // 320dp to pixels
+        val preferredWidthPx = (320 * displayMetrics.density).toInt()
+        // Max 50% of screen width
+        sidebarWidthPx = minOf(preferredWidthPx, (screenWidth * 0.5f).toInt())
 
-        val sidebarParams = LayoutParams(sidebarWidth, LayoutParams.MATCH_PARENT).apply {
-            gravity = Gravity.END
-        }
-        addView(sidebarPanel, sidebarParams)
-
-        // 初始隐藏在右侧外面
-        sidebarPanel.translationX = sidebarWidth.toFloat()
-
-        buildSidebarContent()
-    }
-
-    private fun buildSidebarContent() {
-        // 顶部信息区 (固定高度)
-        val infoContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        // 标题
-        val titleText = TextView(context).apply {
-            text = context.getString(R.string.control_panel)
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(0, 12, 0, 16)
-        }
-        infoContainer.addView(titleText)
-
-        // 进度
-        progressText = TextView(context).apply {
-            text = context.getString(R.string.progress_format, 0)
-            textSize = 14f
-            setTextColor(Color.parseColor("#AAAAAA"))
-        }
-        infoContainer.addView(progressText)
-
-        progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
-            progress = 0
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 6
-            ).apply { topMargin = 6; bottomMargin = 8 }
-        }
-        infoContainer.addView(progressBar)
-
-        // URL
-        urlText = TextView(context).apply {
-            text = ""
-            textSize = 12f
-            setTextColor(Color.parseColor("#666666"))
-            maxLines = 1
-        }
-        infoContainer.addView(urlText)
-
-        sidebarPanel.addView(infoContainer)
-
-        // 分隔线
-        addDivider(8)
-
-        // 按钮区域 - 使用 weight 占满剩余空间
-        val buttonContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f // weight = 1, 占满剩余空间
-            )
-        }
-
-        // 添加按钮，每个按钮使用相同的 weight
-        // 游戏模式切换按钮
-        gameModeButton = createWeightedButton(buttonContainer, getGameModeButtonText()) {
-            onGameModeToggle?.invoke()
-            hide()
-        }
-        buttonContainer.addView(gameModeButton)
-
-        // 映射按钮（游戏模式下才能点击）
-        mappingButton = createWeightedButton(buttonContainer, getMappingButtonText()) {
-            if (isGameMode) {
-                onMappingToggle?.invoke()
-                hide()
+        // Create ComposeView
+        composeView = ComposeView(context).apply {
+            layoutParams = LayoutParams(sidebarWidthPx, LayoutParams.MATCH_PARENT).apply {
+                gravity = Gravity.END
             }
-        }
-        updateMappingButtonState()
-        buttonContainer.addView(mappingButton)
-
-        addWeightedButton(buttonContainer, "⟳  ${context.getString(R.string.force_refresh)}") {
-            onForceRefreshClick?.invoke()
-            hide()
-        }
-
-        addWeightedButton(buttonContainer, "🗑  ${context.getString(R.string.clear_cache)}") {
-            onClearCacheClick?.invoke()
-            hide()
-        }
-
-        addWeightedButton(buttonContainer, "✕  ${context.getString(R.string.close)}") {
-            hide()
-        }
-
-        sidebarPanel.addView(buttonContainer)
-    }
-
-    private fun getGameModeButtonText(): String {
-        return if (isGameMode) "🌐  ${context.getString(R.string.web_mode)}" else "🎮  ${context.getString(R.string.game_mode)}"
-    }
-
-    private fun getMappingButtonText(): String {
-        return if (isMappingEnabled) "🎮  ${context.getString(R.string.disable_mapping)}" else "🎮  ${context.getString(R.string.mapping)}"
-    }
-
-    /**
-     * 更新映射按钮状态（根据游戏模式显示可用/禁用状态）
-     */
-    private fun updateMappingButtonState() {
-        if (::mappingButton.isInitialized) {
-            mappingButton.text = getMappingButtonText()
-            if (isGameMode) {
-                mappingButton.setTextColor(Color.WHITE)
-                mappingButton.alpha = 1.0f
-            } else {
-                mappingButton.setTextColor(Color.parseColor("#666666"))
-                mappingButton.alpha = 0.5f
-            }
-        }
-    }
-
-    /**
-     * 更新游戏模式状态
-     */
-    fun updateGameMode(gameMode: Boolean) {
-        isGameMode = gameMode
-        if (::gameModeButton.isInitialized) {
-            gameModeButton.text = getGameModeButtonText()
-        }
-        // 切换到网页模式时，自动关闭映射
-        if (!gameMode && isMappingEnabled) {
-            isMappingEnabled = false
-        }
-        updateMappingButtonState()
-    }
-
-    /**
-     * 更新映射状态
-     */
-    fun updateMappingEnabled(enabled: Boolean) {
-        isMappingEnabled = enabled
-        updateMappingButtonState()
-    }
-
-    /**
-     * 创建带权重的按钮并返回
-     */
-    private fun createWeightedButton(container: LinearLayout, text: String, onClick: () -> Unit): TextView {
-        return TextView(context).apply {
-            this.text = text
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(24, 0, 24, 0)
-
-            // 使用 weight 平均分配高度
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f // 每个按钮 weight = 1
-            )
-
-            // 圆角背景
-            background = GradientDrawable().apply {
-                setColor(Color.TRANSPARENT)
-                cornerRadius = 8f
-            }
-
-            // 点击监听
-            setOnClickListener { onClick() }
-
-            // 触摸反馈
-            setOnTouchListener { v, event ->
-                val bg = v.background as? GradientDrawable
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        bg?.setColor(Color.parseColor("#33FFFFFF"))
-                        v.invalidate()
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        bg?.setColor(Color.TRANSPARENT)
-                        v.invalidate()
-                    }
+            // Initial Translation (Hidden)
+            translationX = sidebarWidthPx.toFloat()
+            
+            setContent {
+                RA2WebOnPhoneTheme {
+                    SidebarContent(
+                        progress = _progress,
+                        url = _url,
+                        isGameMode = _isGameMode,
+                        isMappingEnabled = _isMappingEnabled,
+                        onGameModeClick = { 
+                            onGameModeToggle?.invoke()
+                            hide()
+                        },
+                        onMappingClick = { 
+                            if (_isGameMode) {
+                                onMappingToggle?.invoke()
+                                hide()
+                            }
+                        },
+                        onControlsClick = { 
+                            onControlMethodSettingsClick?.invoke()
+                            hide()
+                        },
+                        onRefreshClick = { 
+                            onForceRefreshClick?.invoke()
+                            hide()
+                        },
+                        onClearCacheClick = { 
+                            onClearCacheClick?.invoke()
+                            hide()
+                        },
+                        onCloseClick = { hide() }
+                    )
                 }
-                false
             }
         }
-    }
-
-    private fun addWeightedButton(container: LinearLayout, text: String, onClick: () -> Unit) {
-        val button = TextView(context).apply {
-            this.text = text
-            textSize = 20f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(24, 0, 24, 0)
-
-            // 使用 weight 平均分配高度
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f // 每个按钮 weight = 1
-            )
-
-            // 圆角背景
-            background = GradientDrawable().apply {
-                setColor(Color.TRANSPARENT)
-                cornerRadius = 8f
-            }
-
-            // 点击监听
-            setOnClickListener { onClick() }
-
-            // 触摸反馈
-            setOnTouchListener { v, event ->
-                val bg = v.background as? GradientDrawable
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        bg?.setColor(Color.parseColor("#33FFFFFF"))
-                        v.invalidate()
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        bg?.setColor(Color.TRANSPARENT)
-                        v.invalidate()
-                    }
-                }
-                false
-            }
-        }
-        container.addView(button)
-    }
-
-    private fun addDivider(verticalMargin: Int) {
-        val divider = View(context).apply {
-            setBackgroundColor(Color.parseColor("#333333"))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 1
-            ).apply {
-                topMargin = verticalMargin
-                bottomMargin = verticalMargin
-            }
-        }
-        sidebarPanel.addView(divider)
+        addView(composeView)
     }
 
     fun attachWebView(webView: WebView) {
@@ -329,12 +155,23 @@ class SidebarView @JvmOverloads constructor(
     }
 
     fun updateProgress(progress: Int) {
-        progressBar.progress = progress
-        progressText.text = context.getString(R.string.progress_format, progress)
+        _progress = progress
     }
 
     fun updateUrl(url: String) {
-        urlText.text = url
+        _url = url
+    }
+
+    fun updateGameMode(gameMode: Boolean) {
+        _isGameMode = gameMode
+        // Switch to web mode -> disable mapping automatically
+        if (!gameMode && _isMappingEnabled) {
+            _isMappingEnabled = false
+        }
+    }
+
+    fun updateMappingEnabled(enabled: Boolean) {
+        _isMappingEnabled = enabled
     }
 
     fun show() {
@@ -344,19 +181,21 @@ class SidebarView @JvmOverloads constructor(
         bringToFront()
         visibility = View.VISIBLE
 
+        // Animate scrim
         ValueAnimator.ofInt(0, 100).apply {
             duration = animationDuration
             addUpdateListener {
-                setBackgroundColor(Color.argb(it.animatedValue as Int, 0, 0, 0))
+                setBackgroundColor(Color.argb((it.animatedValue as Int) * 128 / 100, 0, 0, 0)) // Max alpha ~128 (50%)
             }
             start()
         }
 
-        ValueAnimator.ofFloat(sidebarWidth.toFloat(), 0f).apply {
+        // Animate sidebar slide in
+        ValueAnimator.ofFloat(sidebarWidthPx.toFloat(), 0f).apply {
             duration = animationDuration
             interpolator = DecelerateInterpolator()
             addUpdateListener {
-                sidebarPanel.translationX = it.animatedValue as Float
+                composeView.translationX = it.animatedValue as Float
             }
             start()
         }
@@ -366,20 +205,22 @@ class SidebarView @JvmOverloads constructor(
         if (!isShowing) return
         isShowing = false
 
+        // Animate scrim fade out
         ValueAnimator.ofInt(100, 0).apply {
             duration = animationDuration
             addUpdateListener {
-                setBackgroundColor(Color.argb(it.animatedValue as Int, 0, 0, 0))
+                setBackgroundColor(Color.argb((it.animatedValue as Int) * 128 / 100, 0, 0, 0))
             }
             start()
         }
 
-        ValueAnimator.ofFloat(0f, sidebarWidth.toFloat()).apply {
+        // Animate sidebar slide out
+        ValueAnimator.ofFloat(0f, sidebarWidthPx.toFloat()).apply {
             duration = animationDuration
             interpolator = DecelerateInterpolator()
             addUpdateListener {
-                sidebarPanel.translationX = it.animatedValue as Float
-                if (it.animatedValue as Float >= sidebarWidth.toFloat()) {
+                composeView.translationX = it.animatedValue as Float
+                if (it.animatedValue as Float >= sidebarWidthPx.toFloat()) {
                     visibility = View.GONE
                 }
             }
@@ -388,10 +229,187 @@ class SidebarView @JvmOverloads constructor(
 
         onCloseClick?.invoke()
     }
-
+    
     fun toggle() {
         if (isShowing) hide() else show()
     }
-
+    
     fun isVisible(): Boolean = isShowing
+}
+
+@Composable
+fun SidebarContent(
+    progress: Int,
+    url: String,
+    isGameMode: Boolean,
+    isMappingEnabled: Boolean,
+    onGameModeClick: () -> Unit,
+    onMappingClick: () -> Unit,
+    onControlsClick: () -> Unit,
+    onRefreshClick: () -> Unit,
+    onClearCacheClick: () -> Unit,
+    onCloseClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surfaceContainer, // Material You-ish background
+        tonalElevation = 6.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Header Section
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.control_panel),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Progress
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${progress}%",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LinearProgressIndicator(
+                        progress = { progress / 100f },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 8.dp)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // URL
+                Text(
+                    text = url,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Buttons - fill remaining space equally
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f), // Take remaining space
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Game Mode
+                SidebarButton(
+                    text = if (isGameMode) stringResource(R.string.web_mode) else stringResource(R.string.game_mode),
+                    icon = if (isGameMode) Icons.Default.Language else Icons.Default.SportsEsports,
+                    modifier = Modifier.weight(1f),
+                    onClick = onGameModeClick,
+                    containerColor = if (isGameMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = if (isGameMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                )
+
+                // Mapping (Enabled only in Game Mode)
+                SidebarButton(
+                    text = if (isMappingEnabled) stringResource(R.string.disable_mapping) else stringResource(R.string.mapping),
+                    icon = Icons.Default.Gamepad,
+                    modifier = Modifier.weight(1f),
+                    onClick = onMappingClick,
+                    enabled = isGameMode,
+                    containerColor = if (isMappingEnabled) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = if (isMappingEnabled) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onSurface,
+                    alpha = if (isGameMode) 1f else 0.5f
+                )
+
+                // Control Method Settings
+                SidebarButton(
+                    text = stringResource(R.string.control_method),
+                    icon = Icons.Default.Settings,
+                    modifier = Modifier.weight(1f),
+                    onClick = onControlsClick
+                )
+
+                // Force Refresh
+                SidebarButton(
+                    text = stringResource(R.string.force_refresh),
+                    icon = Icons.Default.Refresh,
+                    modifier = Modifier.weight(1f),
+                    onClick = onRefreshClick
+                )
+
+                // Clear Cache
+                SidebarButton(
+                    text = stringResource(R.string.clear_cache),
+                    icon = Icons.Default.Delete,
+                    modifier = Modifier.weight(1f),
+                    onClick = onClearCacheClick
+                )
+
+
+            }
+        }
+    }
+}
+
+@Composable
+fun SidebarButton(
+    text: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    alpha: Float = 1f
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp)),
+        color = containerColor.copy(alpha = alpha * if (enabled) 1f else 0.6f),
+        contentColor = contentColor.copy(alpha = alpha * if (enabled) 1f else 0.6f)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 8.dp).height(24.dp)
+                )
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
 }

@@ -69,10 +69,34 @@
     <string name="new_version_available">新しいバージョン %s が利用可能です</string>
     <string name="current_version_update_available">バージョン %s のアップデートがあります</string>
     <string name="update_content">更新内容</string>
-    <string name="update_now">今すぐ更新</string>
+    <string name="update_now">更新</string>
     <string name="force_update_warning">このアップデートは3日以上前にリリースされており、使用を続けるには更新が必要です</string>
     <string name="exit_app">アプリを終了</string>
     
+    <!-- Control Method -->
+    <string name="control_method">操作方法</string>
+    <string name="select_control_method">操作方法を選択</string>
+    <string name="control_mode_joystick">ジョイスティック (Joystick)</string>
+    <string name="control_mode_keyboard">フルキーボード (Full Keyboard)</string>
+    <string name="settings_saved">設定を保存しました</string>
+    <string name="confirm">OK</string>
+
+    <string name="mapping_info_joystick">[ジョイスティックモード]
+左スティック: カーソル移動
+R1: クリック/決定
+A: 攻撃  B: 基地
+X: 配備  Y: 同種選択
+Start: メニュー  Select: 強制
+L1: 選択</string>
+
+    <string name="mapping_info_keyboard">[キーボードモード]
+ESXF: カーソル移動
+P: クリック/決定
+J: 攻撃  K: 基地
+U: 配備  I: 同種選択
+Q: メニュー  A: 強制
+O: 選択</string>
+
     <!-- Gamepad Controller -->
     <string name="joystick_in_use">ジョイスティック使用中、先に離してください</string>
 </resources>
